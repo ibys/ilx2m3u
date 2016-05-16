@@ -2,28 +2,27 @@ package com.ibys.ilx2m3u;
 
 import java.io.File;
 import java.io.UnsupportedEncodingException;
-import java.net.URLDecoder;
-
-import org.apache.commons.io.FilenameUtils;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 public class Track {
 	private String name;
 	private String artist;
 	private String album;
-	private String location;
+	private Path path;
 	private String filename;
 	private File file = null;
 
-	public Track(String name, String artist, String album, String location) throws UnsupportedEncodingException {
+	public Track(String name, String artist, String album, String path)
+			throws UnsupportedEncodingException, URISyntaxException {
 		this.name = name;
 		this.artist = artist;
 		this.album = album;
-		String tmp = location.replaceFirst("file://localhost/", "");
-		tmp = URLDecoder.decode(tmp, java.nio.charset.StandardCharsets.UTF_8.toString());
-		this.location = URLDecoder.decode(location.replace("+", "%2B").replaceFirst("file://localhost/", ""),
-				java.nio.charset.StandardCharsets.UTF_8.toString());
-		this.file = new File(this.location);
-		this.filename = FilenameUtils.getName(this.location);
+		this.path = Paths.get(new URI(path.replaceFirst("localhost", "")));
+		this.file = this.path.toFile();
+		this.filename = this.file.getName();
 	}
 
 	public String getArtist() {
@@ -38,12 +37,12 @@ public class Track {
 		return album;
 	}
 
-	public String getLocation() {
-		return location;
+	public Path getPath() {
+		return path;
 	}
 
 	public String toString() {
-		return name + " - " + artist + " <" + album + ">: \"" + location + "\"";
+		return name + " - " + artist + " <" + album + ">: \"" + path + "\"";
 	}
 
 	public String getFilename() {
