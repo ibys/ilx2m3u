@@ -2,16 +2,12 @@ package com.ibys.ilx2m3u;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Scanner;
 
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.output.FileWriterWithEncoding;
 import org.apache.logging.log4j.core.Logger;
 import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.config.Configuration;
@@ -24,10 +20,6 @@ import com.dd.plist.NSDictionary;
 import com.dd.plist.NSObject;
 import com.dd.plist.PropertyListParser;
 
-/**
- * Hello world!
- *
- */
 public final class Main {
 	private static ConfigurationFactory factory;
 	private static ConfigurationSource configurationSource;
@@ -43,8 +35,6 @@ public final class Main {
 	}
 
 	public static void main(String[] args) throws Exception {
-
-		ArrayList<Playlist> playlists = new ArrayList<Playlist>();
 
 		if (args.length != 2) {
 			System.out.println("Usage: ilx2m3u <iTunesMusicLibraryXml> <outputPath>");
@@ -98,7 +88,8 @@ public final class Main {
 			}
 
 			logger.info("Playlist found: \"" + playlistName + "\"");
-			Playlist playlist = new Playlist(loggerContext, playlistName, outputPath + "/" + playlistName + ".m3u");
+
+			Playlist playlist = new Playlist(loggerContext, playlistName);
 
 			NSObject[] nPlaylistItems = ((NSArray) ((NSDictionary) param).objectForKey("Playlist Items")).getArray();
 
@@ -116,43 +107,8 @@ public final class Main {
 						album == null ? "unknownAlbum" : album.toString(), location == null ? "" : location.toString());
 			}
 
-			playlists.add(playlist);
-		}
-
-		// Generate m3u playlists and copy track files
-		for (Playlist playlist : playlists) {
-			logger.info("Playlist \"{}\" include {} track(s). Path=\"{}\"", playlist.getName(), playlist.getLength(),
-					playlist.getPath());
-			FileWriterWithEncoding m3uWriter = new FileWriterWithEncoding(playlist.getFile(),
-					StandardCharsets.UTF_8.toString());
-			m3uWriter.write("#EXTM3U\n");
-			Iterator<Track> it = playlist.iterator();
-
-			int i = 0;
-
-			while (it.hasNext()) {
-				Track track = it.next();
-				String illegalFilenameCharacter = "[\\/:*?\"<>|]";
-				String artist = track.getArtist().replaceAll(illegalFilenameCharacter, "");
-				String album = track.getAlbum().replaceAll(illegalFilenameCharacter, "");
-				String filename = track.getFilename().replaceAll(illegalFilenameCharacter, "");
-				Path target = Paths.get(outputPath.toString(), artist, album, filename);
-
-				logger.info("Track [{}] \"{}\" path=\"{}", ++i, track.getName(), track.getPath());
-
-				if (!track.getFile().exists()) {
-					logger.warn("File not found, track removed from playlist.");
-					continue;
-				} else if (target.toFile().exists()) {
-					logger.debug("File already exists, skip copy to \"" + target + "\"");
-				} else {
-					FileUtils.copyFile(track.getFile(), target.toFile());
-					logger.debug("File copied to \"" + target + "\"");
-				}
-
-				m3uWriter.write(artist + "/" + album + "/" + filename + "\n");
-			}
-			m3uWriter.close();
+			// Generate m3u playlist and copy track files
+			playlist.genM3u(outputPath.toString());
 		}
 
 		logger.info(Main.class.getSimpleName() + " Stop.");
